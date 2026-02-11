@@ -6,10 +6,9 @@ import zipfile
 import io
 import shutil
 from datetime import datetime
+from pypdf import PdfWriter
 
-# ────────────────────────────────────────────────
-# ฟังก์ชันแปลงเลขเป็นตัวอักษรไทย (จากของคุณ ไม่มี "ถ้วน")
-# ────────────────────────────────────────────────
+# ฟังก์ชันแปลงเลขเป็นตัวอักษรไทย (เหมือนเดิม)
 def number_to_thai_text(num):
     if not num or pd.isna(num):
         return ""
@@ -63,52 +62,40 @@ def number_to_thai_text(num):
 st.set_page_config(page_title="สร้าง ภ.ง.ด.50 ทวิ ปี 2568", layout="wide")
 
 st.title("เครื่องมือสร้าง ภ.ง.ด.50 ทวิ ปี 2568")
-st.markdown("อัปโหลดไฟล์ Excel → เลือกชีท → กดสร้าง → ดาวน์โหลด ZIP")
+st.markdown("อัปโหลดไฟล์ Excel → เลือกชีท → กดสร้าง → ดาวน์โหลด PDF รวมทุกหน้า")
 
-# ── อัปโหลดไฟล์ ───────────────────────────────────────
+# อัปโหลดไฟล์
 col1, col2 = st.columns(2)
 with col1:
     excel_file = st.file_uploader("เลือกไฟล์ Excel (.xlsx)", type=["xlsx"])
 with col2:
     template_file = st.file_uploader("เลือก Template PDF (optional)", type=["pdf"])
 
-# จัดการ template path
+# จัดการ template
 if template_file is not None:
     template_path = "temp_template.pdf"
     with open(template_path, "wb") as f:
         f.write(template_file.getbuffer())
 else:
-    template_path = "50ทวิ68(1).pdf"  # default ถ้ามีใน folder
-
-# ── เลือก sheet ────────────────────────────────────────
-selected_sheet = None
-df = None
+    template_path = "50ทวิ68(1).pdf"  # ต้องมีไฟล์นี้ใน directory หรือจะ error
 
 if excel_file is not None:
     try:
         excel = pd.ExcelFile(excel_file)
         sheet_names = excel.sheet_names
         
-        st.success(f"ไฟล์ Excel พร้อมใช้งาน: {excel_file.name} ({excel_file.size / 1024:.1f} KB)")
-        st.info(f"พบชีททั้งหมด: {', '.join(sheet_names)}")
+        st.success(f"ไฟล์ Excel พร้อมใช้งาน: {excel_file.name}")
+        st.info(f"ชีทที่มี: {', '.join(sheet_names)}")
         
-        default_index = 0
-        if "MasterSheet" in sheet_names:
-            default_index = sheet_names.index("MasterSheet")
+        default_index = sheet_names.index("MasterSheet") if "MasterSheet" in sheet_names else 0
+        selected_sheet = st.selectbox("เลือกชีทข้อมูลหลัก", options=sheet_names, index=default_index)
         
-        selected_sheet = st.selectbox(
-            "เลือกชีทข้อมูลหลัก",
-            options=sheet_names,
-            index=default_index
-        )
-        
-        if st.button("เริ่มสร้าง PDF ทั้งหมด", type="primary", use_container_width=True):
+        if st.button("เริ่มสร้าง PDF รวมทุกหน้า", type="primary", use_container_width=True):
             with st.spinner(f"กำลังอ่านชีท '{selected_sheet}'..."):
                 df = pd.read_excel(excel_file, sheet_name=selected_sheet)
             
-            st.success(f"อ่านข้อมูลสำเร็จ: {len(df)} แถว จากชีท '{selected_sheet}'")
+            st.success(f"อ่านข้อมูลสำเร็จ: {len(df)} แถว")
             
-            # ── สร้าง output folder ชั่วคราว ───────────────────────────
             output_folder = "temp_output_50tawi"
             os.makedirs(output_folder, exist_ok=True)
             
@@ -117,14 +104,12 @@ if excel_file is not None:
             
             success_count = 0
             error_count = 0
-            created_files = []
+            created_files = []  # สำคัญ! อยู่ตรงนี้ นอก loop
             
-            # ข้อมูลผู้จ่าย (คงเดิม)
             PAYER_TIN   = "0-9940-09392-50-8"
             PAYER_NAME  = "เทศบาลเมืองบ้านไผ่"
             PAYER_ADDR  = "905 หมู่ 3, ถนนเจนจบทิศ, ตำบลในเมือง อำเภอบ้านไผ่ จังหวัดขอนแก่น 40110"
             PAYER_ADDR2 = "สำนักงานเทศบาลเมืองบ้านไผ่"
-            
             year = "2568"
             
             for index, row in df.iterrows():
@@ -141,8 +126,10 @@ if excel_file is not None:
                     value = row.get('รวม', '')
                     recipient_pay = f"{float(value):,.2f}" if value != '' and pd.notna(value) else ''
                     
-                    recipient_tax = str(row.get('ภาษี', '')).strip()
-                    tax_thai = number_to_thai_text(recipient_tax)
+                    # แก้ไขส่วนภาษีให้ชัดเจนขึ้น (สมมติใช้คอลัมน์ 'ภาษี' จริง ๆ)
+                    tax_value = row.get('ภาษี', '')  # ถ้าไม่มีคอลัมน์นี้ จะเป็น ''
+                    recipient_tax = f"{float(tax_value):,.2f}" if tax_value != '' and pd.notna(tax_value) else '0.00'
+                    tax_thai = number_to_thai_text(recipient_tax)  # ใช้ค่าเดิม ไม่แปลงเป็น string ทศนิยมซ้ำ
                     
                     chk_values = {'chk1': 'Yes'}
                     
@@ -151,16 +138,12 @@ if excel_file is not None:
                         'name1': PAYER_NAME,
                         'add1': PAYER_ADDR,
                         'add2': PAYER_ADDR2,
-                        
                         'id1_2': recipient_tin,
                         'name2': recipient_name,
-                        
                         'book_no': "1",
                         'run_no': f"{index+1:03d}",
                         'item': str(index+1),
-                        
                         **chk_values,
-                        
                         'date2': year,
                         'pay1.1': recipient_pay,
                         'tax1.1': recipient_tax,
@@ -169,46 +152,53 @@ if excel_file is not None:
                         'total': tax_thai,
                     }
                     
-                    output_filename = f"50ทวิ_{recipient_name}_{year}.pdf"
-                    output_path = os.path.join(output_folder, output_filename)
-                    
+                    temp_filename = f"temp_page_{index+1:03d}.pdf"
+                    output_path = os.path.join(output_folder, temp_filename)
+
                     fillpdfs.write_fillable_pdf(
                         template_path,
                         output_path,
                         data_dict,
                         flatten=True
                     )
-                    
+
                     created_files.append(output_path)
                     success_count += 1
                 
                 except Exception as e:
                     error_count += 1
                     st.warning(f"แถว {index+1} ({recipient_name}): {str(e)}")
-                
+                    continue
+
                 progress_bar.progress((index + 1) / len(df))
                 status_text.text(f"ประมวลผล {index+1}/{len(df)} | สำเร็จ {success_count} | ผิดพลาด {error_count}")
             
-            # ── สรุปผล + ดาวน์โหลด ZIP ───────────────────────────────
-            if success_count > 0:
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
-                    for file_path in created_files:
-                        zipf.write(file_path, os.path.basename(file_path))
+            # ── Merge เป็น PDF เดียวหลัง loop เสร็จ ───────────────────────────
+            if success_count > 0 and created_files:
+                final_pdf_path = os.path.join(output_folder, f"50ทวิ_ทั้งหมด_{year}.pdf")
+                writer = PdfWriter()
                 
-                zip_buffer.seek(0)
+                for pdf_path in created_files:
+                    writer.append(pdf_path)
                 
-                st.success(f"สร้างสำเร็จ {success_count} ไฟล์ (ผิดพลาด {error_count} รายการ)")
+                writer.write(final_pdf_path)
+                writer.close()
+                
+                # อ่านไฟล์เพื่อ download
+                with open(final_pdf_path, "rb") as f:
+                    pdf_bytes = f.read()
+                
+                st.success(f"สร้าง PDF รวมสำเร็จ {success_count} หน้า (ผิดพลาด {error_count} รายการ)")
                 
                 st.download_button(
-                    label="ดาวน์โหลด ZIP ไฟล์ PDF ทั้งหมด",
-                    data=zip_buffer,
-                    file_name=f"50ทวิทั้งหมด_{datetime.now().strftime('%Y%m%d_%H%M')}.zip",
-                    mime="application/zip",
+                    label="ดาวน์โหลด PDF รวมทุกหน้า",
+                    data=pdf_bytes,
+                    file_name=f"50ทวิ_รวมทั้งหมด_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                    mime="application/pdf",
                     use_container_width=True
                 )
             else:
-                st.error("ไม่สามารถสร้าง PDF ได้เลย กรุณาตรวจสอบข้อมูลในชีท")
+                st.error("ไม่สามารถสร้าง PDF ได้เลย กรุณาตรวจสอบข้อมูล")
             
             # Cleanup
             shutil.rmtree(output_folder, ignore_errors=True)
@@ -217,10 +207,9 @@ if excel_file is not None:
     
     except Exception as e:
         st.error(f"ปัญหาการอ่านไฟล์ Excel: {str(e)}")
-        st.info("แนะนำ: ลองบันทึกไฟล์ Excel เป็น .xlsx ใหม่ แล้วอัปโหลดซ้ำ")
 
 else:
     st.info("กรุณาอัปโหลดไฟล์ Excel (.xlsx) ก่อน")
 
 st.markdown("---")
-st.caption("พัฒนาโดยใช้ Streamlit + fillpdf | ปรับปรุงล่าสุดเพื่อรองรับการเลือกชีทและ ZIP download")
+st.caption("พัฒนาโดยใช้ Streamlit + fillpdf + pypdf | รองรับ PDF รวมหลายหน้า")
