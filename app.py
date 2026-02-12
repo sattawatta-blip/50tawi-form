@@ -106,7 +106,7 @@ if excel_file is not None:
             error_count = 0
             created_files = []  # สำคัญ! อยู่ตรงนี้ นอก loop
             
-            PAYER_TIN   = "0-9940-09392-50-8"
+            PAYER_TIN   = "0-9940-00392-50-8"
             PAYER_NAME  = "เทศบาลเมืองบ้านไผ่"
             PAYER_ADDR  = "905 หมู่ 3, ถนนเจนจบทิศ, ตำบลในเมือง อำเภอบ้านไผ่ จังหวัดขอนแก่น 40110"
             PAYER_ADDR2 = "สำนักงานเทศบาลเมืองบ้านไผ่"
@@ -144,9 +144,9 @@ if excel_file is not None:
                         'run_no': f"{index+1:03d}",
                         'item': str(index+1),
                         **chk_values,
-                        'date2': year,
-                        'pay1.1': recipient_pay,
-                        'tax1.1': recipient_tax,
+                        'date1': year,
+                        'pay1.0': recipient_pay,
+                        'tax1.0': recipient_tax,
                         'pay1.14': recipient_pay,
                         'tax1.14': recipient_tax,
                         'total': tax_thai,
