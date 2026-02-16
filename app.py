@@ -114,6 +114,7 @@ if excel_file is not None:
             
             for index, row in df.iterrows():
                 try:
+                    recipient_number = str(row.get('ลำดับที่', '')).strip()
                     recipient_name = str(row.get('ชื่อ-สกุล', '')).strip()
                     recipient_tin_raw = str(row.get('เลขบัตรประจำตัวประชาชน', '')).strip()
                     
@@ -141,8 +142,8 @@ if excel_file is not None:
                         'id1_2': recipient_tin,
                         'name2': recipient_name,
                         'book_no': "1",
-                        'run_no': f"{index+1:03d}",
-                        'item': str(index+1),
+                        'run_no': recipient_number,
+                        'item': recipient_number,
                         **chk_values,
                         'date1': year,
                         'pay1.0': recipient_pay,
