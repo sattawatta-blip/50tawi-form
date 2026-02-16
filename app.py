@@ -22,7 +22,7 @@ def number_to_thai_text(num):
 
     # ตอนนี้ num เป็น float แน่นอน
     if num == 0:
-        return "ศูนย์บาท"   # หรือ "ศูนย์บาทถ้วน" ถ้าต้องการ
+        return "ศูนย์บาทถ้วน"   # หรือ "ศูนย์บาทถ้วน" ถ้าต้องการ
 
     # ส่วนที่เหลือเหมือนเดิม (สำหรับค่ามากกว่า 0)
     units = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน"]
@@ -55,6 +55,7 @@ def number_to_thai_text(num):
 
     if decimal_part > 0:
         text += convert_integer(decimal_part) + "สตางค์"
+    else:         text += "ถ้วน"
 
     text = text.replace("หนึ่งสิบ", "สิบ")
 
