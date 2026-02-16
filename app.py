@@ -10,17 +10,21 @@ from pypdf import PdfWriter
 
 # ฟังก์ชันแปลงเลขเป็นตัวอักษรไทย (เหมือนเดิม)
 def number_to_thai_text(num):
-    if not num or pd.isna(num):
+    # กรณี NaN / None / pd.NA → ว่าง
+    if pd.isna(num):
         return ""
     
+    # แปลงเป็น float ก่อน (ถ้าเป็น string เช่น '0' หรือ '0.00')
     try:
         num = float(num)
-    except:
-        return ""
+    except (ValueError, TypeError):
+        return ""  # ถ้าแปลงไม่ได้ → ว่าง
 
+    # ตอนนี้ num เป็น float แน่นอน
     if num == 0:
-        return "ศูนย์บาท"
+        return "ศูนย์บาท"   # หรือ "ศูนย์บาทถ้วน" ถ้าต้องการ
 
+    # ส่วนที่เหลือเหมือนเดิม (สำหรับค่ามากกว่า 0)
     units = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน"]
     teens = ["สิบ", "สิบเอ็ด", "สิบสอง", "สิบสาม", "สิบสี่", "สิบห้า", "สิบหก", "สิบเจ็ด", "สิบแปด", "สิบเก้า"]
     ones = ["", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"]
@@ -127,10 +131,20 @@ if excel_file is not None:
                     value = row.get('รวม', '')
                     recipient_pay = f"{float(value):,.2f}" if value != '' and pd.notna(value) else ''
                     
-                    # แก้ไขส่วนภาษีให้ชัดเจนขึ้น (สมมติใช้คอลัมน์ 'ภาษี' จริง ๆ)
-                    tax_value = row.get('ภาษี', '')  # ถ้าไม่มีคอลัมน์นี้ จะเป็น ''
-                    recipient_tax = f"{float(tax_value):,.2f}" if tax_value != '' and pd.notna(tax_value) else '0.00'
-                    tax_thai = number_to_thai_text(recipient_tax)  # ใช้ค่าเดิม ไม่แปลงเป็น string ทศนิยมซ้ำ
+                    # ดึงค่า raw
+                    tax_raw = row.get('ภาษี', pd.NA)
+
+                    recipient_tax = '0.00'
+                    tax_thai = ""
+
+                    if pd.notna(tax_raw):
+                        try:
+                            tax_float = float(tax_raw)          # แปลงก่อน
+                            recipient_tax = f"{tax_float:,.2f}"
+                            tax_thai = number_to_thai_text(tax_float)  # ส่ง float ไปเลย
+                        except (ValueError, TypeError):
+                            # ถ้าแปลงไม่ได้ (เช่น string แปลก ๆ) → ปล่อยว่างหรือ '0.00'
+                            pass
                     
                     chk_values = {'chk1': 'Yes'}
                     
