@@ -119,7 +119,8 @@ if excel_file is not None:
             
             for index, row in df.iterrows():
                 try:
-                    recipient_number = str(row.get('ลำดับที่', '')).strip()
+                    recipient_number_raw = row.get('ลำดับที่', '')
+                    recipient_number = str(int(float(recipient_number_raw))) if pd.notna(recipient_number_raw) and str(recipient_number_raw).replace('.', '', 1).isdigit() else str(recipient_number_raw).strip()
                     recipient_name = str(row.get('ชื่อ-สกุล', '')).strip()
                     recipient_tin_raw = str(row.get('เลขบัตรประจำตัวประชาชน', '')).strip()
                     
