@@ -97,7 +97,7 @@ if excel_file is not None:
         
         if st.button("เริ่มสร้าง PDF รวมทุกหน้า", type="primary", use_container_width=True):
             with st.spinner(f"กำลังอ่านชีท '{selected_sheet}'..."):
-                df = pd.read_excel(excel_file, sheet_name=selected_sheet)
+                df = pd.read_excel(excel_file, sheet_name=selected_sheet, dtype=str)  # อ่านเป็น string ทั้งหมดก่อน
             
             st.success(f"อ่านข้อมูลสำเร็จ: {len(df)} แถว")
             
@@ -119,8 +119,7 @@ if excel_file is not None:
             
             for index, row in df.iterrows():
                 try:
-                    recipient_number_raw = row.get('ลำดับที่', '')
-                    recipient_number = str(int(float(recipient_number_raw))) if pd.notna(recipient_number_raw) and str(recipient_number_raw).replace('.', '', 1).isdigit() else str(recipient_number_raw).strip()
+                    recipient_number = str(row.get('ลำดับที่', '')).strip()
                     recipient_name = str(row.get('ชื่อ-สกุล', '')).strip()
                     recipient_tin_raw = str(row.get('เลขบัตรประจำตัวประชาชน', '')).strip()
                     
