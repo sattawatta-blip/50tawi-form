@@ -131,8 +131,9 @@ if excel_file is not None:
                     
                     value = row.get('รวม', '')
                     recipient_pay = f"{float(value):,.2f}" if value != '' and pd.notna(value) else ''
-                    recipient_pay2 = row.get('ประกันสังคม', '')
-                    
+                    value2 = row.get('ประกันสังคม', '')
+                    recipient_pay2 = f"{int(value2):,}" if value2 != '' and pd.notna(value2) else ''
+
                     # ดึงค่า raw
                     tax_raw = row.get('ภาษี', pd.NA)
 
